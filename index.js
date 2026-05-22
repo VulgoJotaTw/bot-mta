@@ -50,4 +50,6 @@ const token = process.env.TOKEN?.trim();
 console.log("TOKEN existe?", token ? "SIM" : "NÃO");
 console.log("Tamanho do TOKEN:", token ? token.length : 0);
 
+console.log("TESTE:", process.env.TESTE);
+
 client.login(token);
