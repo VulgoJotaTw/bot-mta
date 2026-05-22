@@ -42,8 +42,12 @@ client.on('messageCreate', message => {
         console.error(error);
         message.reply('❌ Erro ao executar comando.');
     }
-console.log("TOKEN existe?", process.env.TOKEN ? "SIM" : "NÃO");
-console.log("Tamanho do TOKEN:", process.env.TOKEN ? process.env.TOKEN.length : 0);
+
 });
 
-client.login(process.env.TOKEN);
+const token = process.env.TOKEN?.trim();
+
+console.log("TOKEN existe?", token ? "SIM" : "NÃO");
+console.log("Tamanho do TOKEN:", token ? token.length : 0);
+
+client.login(token);
