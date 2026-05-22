@@ -51,8 +51,73 @@ function logEmbed(guild, title, description) {
   channel.send({ embeds: [embed] });
 }
 
-client.once('ready', () => {
+async function criarPainelWhitelist() {
+  const canal = await client.channels.fetch(config.painelWhitelistChannelId).catch(() => null);
+  if (!canal) return console.log('❌ Canal de painel whitelist não encontrado.');
+
+  const mensagens = await canal.messages.fetch({ limit: 10 });
+
+  const jaExiste = mensagens.find(msg =>
+    msg.author.id === client.user.id &&
+    msg.embeds.length > 0 &&
+    msg.embeds[0].title?.includes('Whitelist')
+  );
+
+  if (jaExiste) return;
+
+  const embed = new EmbedBuilder()
+    .setColor('#FFD700')
+    .setTitle('📋 Whitelist Cidade de Deus RP')
+    .setDescription('Clique no botão abaixo para iniciar sua whitelist.')
+    .setFooter({ text: 'Boa sorte!' });
+
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId('abrir_whitelist')
+      .setLabel('Fazer Whitelist')
+      .setStyle(ButtonStyle.Success)
+  );
+
+  await canal.send({ embeds: [embed], components: [row] });
+  console.log('✅ Painel de whitelist criado.');
+}
+
+async function criarPainelTicket() {
+  const canal = await client.channels.fetch(config.painelTicketChannelId).catch(() => null);
+  if (!canal) return console.log('❌ Canal de painel ticket não encontrado.');
+
+  const mensagens = await canal.messages.fetch({ limit: 10 });
+
+  const jaExiste = mensagens.find(msg =>
+    msg.author.id === client.user.id &&
+    msg.embeds.length > 0 &&
+    msg.embeds[0].title?.includes('Suporte')
+  );
+
+  if (jaExiste) return;
+
+  const embed = new EmbedBuilder()
+    .setColor('#FFD700')
+    .setTitle('🎫 Suporte Cidade de Deus RP')
+    .setDescription('Precisa de ajuda? Clique no botão abaixo para abrir um ticket com a staff.')
+    .setFooter({ text: 'Cidade de Deus Roleplay' });
+
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId('abrir_ticket')
+      .setLabel('Abrir Ticket')
+      .setStyle(ButtonStyle.Primary)
+  );
+
+  await canal.send({ embeds: [embed], components: [row] });
+  console.log('✅ Painel de ticket criado.');
+}
+
+client.once('ready', async () => {
   console.log(`✅ Bot online como ${client.user.tag}`);
+
+  await criarPainelWhitelist();
+  await criarPainelTicket();
 });
 
 client.on('guildMemberAdd', async member => {
@@ -63,7 +128,11 @@ client.on('guildMemberAdd', async member => {
 
 client.on('messageDelete', message => {
   if (!message.guild || message.author?.bot) return;
-  logEmbed(message.guild, '🗑️ Mensagem apagada', `Autor: ${message.author}\nCanal: ${message.channel}\nMensagem: ${message.content || 'Sem conteúdo'}`);
+  logEmbed(
+    message.guild,
+    '🗑️ Mensagem apagada',
+    `Autor: ${message.author}\nCanal: ${message.channel}\nMensagem: ${message.content || 'Sem conteúdo'}`
+  );
 });
 
 client.on('messageCreate', async message => {
@@ -100,11 +169,19 @@ client.on('interactionCreate', async interaction => {
           },
           {
             id: interaction.user.id,
-            allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages]
+            allow: [
+              PermissionsBitField.Flags.ViewChannel,
+              PermissionsBitField.Flags.SendMessages,
+              PermissionsBitField.Flags.ReadMessageHistory
+            ]
           },
           {
             id: config.staffRoleId,
-            allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages]
+            allow: [
+              PermissionsBitField.Flags.ViewChannel,
+              PermissionsBitField.Flags.SendMessages,
+              PermissionsBitField.Flags.ReadMessageHistory
+            ]
           }
         ]
       });
@@ -221,4 +298,5 @@ client.on('interactionCreate', async interaction => {
 });
 
 const token = process.env.TOKEN?.trim();
+
 client.login(token);
