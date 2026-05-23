@@ -348,9 +348,15 @@ client.on('interactionCreate', async interaction => {
 
     if (member) {
       await member.roles.add(config.approvedRoleId).catch(() => {});
+
+      const cargoSemWL = interaction.guild.roles.cache.get(config.semWhitelistRoleId);
+
+      if (cargoSemWL && member.roles.cache.has(cargoSemWL.id)) {
+        await member.roles.remove(cargoSemWL).catch(() => {});
+      }
     }
 
-    await interaction.update({ content: '✅ Whitelist aprovada.', components: [] });
+    await interaction.update({ content: '✅ Whitelist aprovada. Cargo aprovado adicionado e cargo Sem WL removido.', components: [] });
     logEmbed(interaction.guild, '✅ Whitelist aprovada', `Usuário aprovado: <@${userId}>`);
   }
 
