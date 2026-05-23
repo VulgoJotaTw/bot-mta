@@ -9,7 +9,7 @@ module.exports = {
     try {
 
       const state = await Gamedig.query({
-        type: 'mtasa',
+        type: 'mta',
         host: config.mtaIp,
         port: config.mtaPort
       });
