@@ -11,10 +11,7 @@ const {
   EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
-  ButtonStyle,
-  ModalBuilder,
-  TextInputBuilder,
-  TextInputStyle
+  ButtonStyle
 } = require('discord.js');
 
 const config = require('./config.json');
@@ -48,14 +45,15 @@ function logEmbed(guild, title, description) {
     .setDescription(description)
     .setTimestamp();
 
-  channel.send({ embeds: [embed] });
+  channel.send({ embeds: [embed] }).catch(() => {});
 }
 
 async function criarPainelWhitelist() {
   const canal = await client.channels.fetch(config.painelWhitelistChannelId).catch(() => null);
   if (!canal) return console.log('❌ Canal de painel whitelist não encontrado.');
 
-  const mensagens = await canal.messages.fetch({ limit: 10 });
+  const mensagens = await canal.messages.fetch({ limit: 20 }).catch(() => null);
+  if (!mensagens) return console.log('❌ Não consegui ler mensagens do canal whitelist.');
 
   const jaExiste = mensagens.find(msg =>
     msg.author.id === client.user.id &&
@@ -63,7 +61,10 @@ async function criarPainelWhitelist() {
     msg.embeds[0].title?.includes('Whitelist')
   );
 
-  if (jaExiste) return;
+  if (jaExiste) {
+    await jaExiste.delete().catch(() => {});
+    console.log('🗑️ Painel antigo de whitelist apagado.');
+  }
 
   const embed = new EmbedBuilder()
     .setColor('#FFD700')
@@ -86,7 +87,8 @@ async function criarPainelTicket() {
   const canal = await client.channels.fetch(config.painelTicketChannelId).catch(() => null);
   if (!canal) return console.log('❌ Canal de painel ticket não encontrado.');
 
-  const mensagens = await canal.messages.fetch({ limit: 10 });
+  const mensagens = await canal.messages.fetch({ limit: 20 }).catch(() => null);
+  if (!mensagens) return console.log('❌ Não consegui ler mensagens do canal ticket.');
 
   const jaExiste = mensagens.find(msg =>
     msg.author.id === client.user.id &&
@@ -94,7 +96,10 @@ async function criarPainelTicket() {
     msg.embeds[0].title?.includes('Suporte')
   );
 
-  if (jaExiste) return;
+  if (jaExiste) {
+    await jaExiste.delete().catch(() => {});
+    console.log('🗑️ Painel antigo de ticket apagado.');
+  }
 
   const embed = new EmbedBuilder()
     .setColor('#FFD700')
@@ -122,12 +127,17 @@ client.once('ready', async () => {
 
 client.on('guildMemberAdd', async member => {
   const role = member.guild.roles.cache.get(config.autoRoleId);
-  if (role) await member.roles.add(role).catch(() => {});
+
+  if (role) {
+    await member.roles.add(role).catch(() => {});
+  }
+
   logEmbed(member.guild, '👋 Novo membro', `${member.user} entrou no servidor.`);
 });
 
 client.on('messageDelete', message => {
   if (!message.guild || message.author?.bot) return;
+
   logEmbed(
     message.guild,
     '🗑️ Mensagem apagada',
@@ -154,146 +164,201 @@ client.on('messageCreate', async message => {
 });
 
 client.on('interactionCreate', async interaction => {
-  if (interaction.isButton()) {
-    if (interaction.customId === 'abrir_ticket') {
-      const guild = interaction.guild;
+  if (!interaction.isButton()) return;
 
-      const canal = await guild.channels.create({
-        name: `ticket-${interaction.user.username}`,
-        type: ChannelType.GuildText,
-        parent: config.ticketCategoryId,
-        permissionOverwrites: [
-          {
-            id: guild.id,
-            deny: [PermissionsBitField.Flags.ViewChannel]
-          },
-          {
-            id: interaction.user.id,
-            allow: [
-              PermissionsBitField.Flags.ViewChannel,
-              PermissionsBitField.Flags.SendMessages,
-              PermissionsBitField.Flags.ReadMessageHistory
-            ]
-          },
-          {
-            id: config.staffRoleId,
-            allow: [
-              PermissionsBitField.Flags.ViewChannel,
-              PermissionsBitField.Flags.SendMessages,
-              PermissionsBitField.Flags.ReadMessageHistory
-            ]
-          }
-        ]
-      });
+  if (interaction.customId === 'abrir_ticket') {
+    const guild = interaction.guild;
 
-      const embed = new EmbedBuilder()
-        .setColor('#FFD700')
-        .setTitle('🎫 Ticket aberto')
-        .setDescription(`${interaction.user}, aguarde a staff te atender.`)
-        .setTimestamp();
+    const canal = await guild.channels.create({
+      name: `ticket-${interaction.user.username}`,
+      type: ChannelType.GuildText,
+      parent: config.ticketCategoryId,
+      permissionOverwrites: [
+        {
+          id: guild.id,
+          deny: [PermissionsBitField.Flags.ViewChannel]
+        },
+        {
+          id: interaction.user.id,
+          allow: [
+            PermissionsBitField.Flags.ViewChannel,
+            PermissionsBitField.Flags.SendMessages,
+            PermissionsBitField.Flags.ReadMessageHistory
+          ]
+        },
+        {
+          id: config.staffRoleId,
+          allow: [
+            PermissionsBitField.Flags.ViewChannel,
+            PermissionsBitField.Flags.SendMessages,
+            PermissionsBitField.Flags.ReadMessageHistory
+          ]
+        }
+      ]
+    });
 
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId('fechar_ticket')
-          .setLabel('Fechar Ticket')
-          .setStyle(ButtonStyle.Danger)
-      );
+    const embed = new EmbedBuilder()
+      .setColor('#FFD700')
+      .setTitle('🎫 Ticket aberto')
+      .setDescription(`${interaction.user}, aguarde a staff te atender.`)
+      .setTimestamp();
 
-      await canal.send({ content: `${interaction.user}`, embeds: [embed], components: [row] });
-      await interaction.reply({ content: `✅ Ticket criado: ${canal}`, ephemeral: true });
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId('fechar_ticket')
+        .setLabel('Fechar Ticket')
+        .setStyle(ButtonStyle.Danger)
+    );
 
-      logEmbed(guild, '🎫 Ticket criado', `${interaction.user} abriu um ticket.`);
-    }
+    await canal.send({ content: `${interaction.user}`, embeds: [embed], components: [row] });
+    await interaction.reply({ content: `✅ Ticket criado: ${canal}`, ephemeral: true });
 
-    if (interaction.customId === 'fechar_ticket') {
-      await interaction.reply('🔒 Ticket será fechado em 5 segundos.');
-      setTimeout(() => interaction.channel.delete().catch(() => {}), 5000);
-    }
-
-    if (interaction.customId === 'abrir_whitelist') {
-      const modal = new ModalBuilder()
-        .setCustomId('form_whitelist')
-        .setTitle('Whitelist Cidade de Deus RP');
-
-      const nome = new TextInputBuilder()
-        .setCustomId('nome')
-        .setLabel('Nome e idade')
-        .setStyle(TextInputStyle.Short)
-        .setRequired(true);
-
-      const rp = new TextInputBuilder()
-        .setCustomId('rp')
-        .setLabel('Explique o que é RP')
-        .setStyle(TextInputStyle.Paragraph)
-        .setRequired(true);
-
-      const historia = new TextInputBuilder()
-        .setCustomId('historia')
-        .setLabel('História do seu personagem')
-        .setStyle(TextInputStyle.Paragraph)
-        .setRequired(true);
-
-      modal.addComponents(
-        new ActionRowBuilder().addComponents(nome),
-        new ActionRowBuilder().addComponents(rp),
-        new ActionRowBuilder().addComponents(historia)
-      );
-
-      await interaction.showModal(modal);
-    }
-
-    if (interaction.customId.startsWith('aprovar_')) {
-      const userId = interaction.customId.split('_')[1];
-      const member = await interaction.guild.members.fetch(userId).catch(() => null);
-
-      if (member) {
-        await member.roles.add(config.approvedRoleId).catch(() => {});
-      }
-
-      await interaction.update({ content: '✅ Whitelist aprovada.', components: [] });
-      logEmbed(interaction.guild, '✅ Whitelist aprovada', `Usuário aprovado: <@${userId}>`);
-    }
-
-    if (interaction.customId.startsWith('reprovar_')) {
-      const userId = interaction.customId.split('_')[1];
-      await interaction.update({ content: '❌ Whitelist reprovada.', components: [] });
-      logEmbed(interaction.guild, '❌ Whitelist reprovada', `Usuário reprovado: <@${userId}>`);
-    }
+    logEmbed(guild, '🎫 Ticket criado', `${interaction.user} abriu um ticket.`);
   }
 
-  if (interaction.isModalSubmit()) {
-    if (interaction.customId === 'form_whitelist') {
-      const nome = interaction.fields.getTextInputValue('nome');
-      const rp = interaction.fields.getTextInputValue('rp');
-      const historia = interaction.fields.getTextInputValue('historia');
+  if (interaction.customId === 'fechar_ticket') {
+    await interaction.reply('🔒 Ticket será fechado em 5 segundos.');
+    setTimeout(() => interaction.channel.delete().catch(() => {}), 5000);
+  }
 
-      const canal = interaction.guild.channels.cache.get(config.whitelistChannelId);
+  if (interaction.customId === 'abrir_whitelist') {
+    const guild = interaction.guild;
 
-      const embed = new EmbedBuilder()
+    const canal = await guild.channels.create({
+      name: `whitelist-${interaction.user.username}`,
+      type: ChannelType.GuildText,
+      parent: config.whitelistCategoryId,
+      permissionOverwrites: [
+        {
+          id: guild.id,
+          deny: [PermissionsBitField.Flags.ViewChannel]
+        },
+        {
+          id: interaction.user.id,
+          allow: [
+            PermissionsBitField.Flags.ViewChannel,
+            PermissionsBitField.Flags.SendMessages,
+            PermissionsBitField.Flags.ReadMessageHistory
+          ]
+        },
+        {
+          id: config.staffRoleId,
+          allow: [
+            PermissionsBitField.Flags.ViewChannel,
+            PermissionsBitField.Flags.SendMessages,
+            PermissionsBitField.Flags.ReadMessageHistory
+          ]
+        }
+      ]
+    });
+
+    await interaction.reply({
+      content: `✅ Sua whitelist foi criada: ${canal}`,
+      ephemeral: true
+    });
+
+    const perguntas = [
+      '👤 Qual seu nome e idade?',
+      '🚫 O que é SAV?',
+      '🔫 O que é RDM?',
+      '🚗 O que é VDM?',
+      '🌐 O que é CL?',
+      '🏄 O que é Surf?',
+      '🚘 O que é Car Jacking?',
+      '🌑 O que é Dark RP?',
+      '🛡️ Quais são as zonas safe?',
+      '🎭 O que é Power Gaming?',
+      '🧠 O que é Meta Gaming?',
+      '📖 Conte a história do seu personagem.'
+    ];
+
+    const respostas = [];
+
+    for (const pergunta of perguntas) {
+      const embedPergunta = new EmbedBuilder()
         .setColor('#FFD700')
-        .setTitle('📋 Nova Whitelist')
-        .addFields(
-          { name: '👤 Usuário', value: `${interaction.user}` },
-          { name: '📌 Nome/Idade', value: nome },
-          { name: '🎭 O que é RP?', value: rp },
-          { name: '📖 História', value: historia }
-        )
-        .setTimestamp();
+        .setTitle('📋 Whitelist Cidade de Deus RP')
+        .setDescription(pergunta)
+        .setFooter({ text: 'Responda abaixo. Você tem 5 minutos.' });
 
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId(`aprovar_${interaction.user.id}`)
-          .setLabel('Aprovar')
-          .setStyle(ButtonStyle.Success),
-        new ButtonBuilder()
-          .setCustomId(`reprovar_${interaction.user.id}`)
-          .setLabel('Reprovar')
-          .setStyle(ButtonStyle.Danger)
-      );
+      await canal.send({ embeds: [embedPergunta] });
 
-      await canal.send({ embeds: [embed], components: [row] });
-      await interaction.reply({ content: '✅ Sua whitelist foi enviada para análise.', ephemeral: true });
+      const coletor = canal.createMessageCollector({
+        filter: m => m.author.id === interaction.user.id,
+        max: 1,
+        time: 300000
+      });
+
+      const resposta = await new Promise(resolve => {
+        coletor.on('collect', m => resolve(m.content));
+
+        coletor.on('end', collected => {
+          if (collected.size === 0) resolve('❌ Não respondeu.');
+        });
+      });
+
+      respostas.push({
+        pergunta,
+        resposta
+      });
     }
+
+    const canalStaff = await guild.channels.fetch(config.whitelistChannelId).catch(() => null);
+
+    if (!canalStaff) {
+      return canal.send('❌ Canal de análise da whitelist não encontrado. Avise a staff.');
+    }
+
+    const embedFinal = new EmbedBuilder()
+      .setColor('#FFD700')
+      .setTitle('📋 Nova Whitelist')
+      .setDescription(`Usuário: ${interaction.user}`)
+      .setTimestamp();
+
+    respostas.forEach(r => {
+      embedFinal.addFields({
+        name: r.pergunta,
+        value: r.resposta.slice(0, 1024)
+      });
+    });
+
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`aprovar_${interaction.user.id}`)
+        .setLabel('Aprovar')
+        .setStyle(ButtonStyle.Success),
+
+      new ButtonBuilder()
+        .setCustomId(`reprovar_${interaction.user.id}`)
+        .setLabel('Reprovar')
+        .setStyle(ButtonStyle.Danger)
+    );
+
+    await canalStaff.send({
+      embeds: [embedFinal],
+      components: [row]
+    });
+
+    await canal.send('✅ Sua whitelist foi enviada para análise da staff.');
+  }
+
+  if (interaction.customId.startsWith('aprovar_')) {
+    const userId = interaction.customId.split('_')[1];
+    const member = await interaction.guild.members.fetch(userId).catch(() => null);
+
+    if (member) {
+      await member.roles.add(config.approvedRoleId).catch(() => {});
+    }
+
+    await interaction.update({ content: '✅ Whitelist aprovada.', components: [] });
+    logEmbed(interaction.guild, '✅ Whitelist aprovada', `Usuário aprovado: <@${userId}>`);
+  }
+
+  if (interaction.customId.startsWith('reprovar_')) {
+    const userId = interaction.customId.split('_')[1];
+
+    await interaction.update({ content: '❌ Whitelist reprovada.', components: [] });
+    logEmbed(interaction.guild, '❌ Whitelist reprovada', `Usuário reprovado: <@${userId}>`);
   }
 });
 
