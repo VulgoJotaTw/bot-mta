@@ -93,7 +93,7 @@ async function criarPainelTicket() {
   const jaExiste = mensagens.find(msg =>
     msg.author.id === client.user.id &&
     msg.embeds.length > 0 &&
-    msg.embeds[0].title?.includes('Suporte')
+    msg.embeds[0].title?.includes('Central de Atendimento')
   );
 
   if (jaExiste) {
@@ -103,19 +103,45 @@ async function criarPainelTicket() {
 
   const embed = new EmbedBuilder()
     .setColor('#FFD700')
-    .setTitle('🎫 Suporte Cidade de Deus RP')
-    .setDescription('Precisa de ajuda? Clique no botão abaixo para abrir um ticket com a staff.')
+    .setTitle('🎫 Central de Atendimento')
+    .setDescription(`
+Selecione o tipo de atendimento abaixo:
+
+🎫 **Suporte** — dúvidas ou ajuda geral
+🚨 **Denúncia** — denunciar player/staff
+💰 **Compras** — dúvidas sobre compras/VIP
+🐞 **Bug** — reportar erro do servidor
+    `)
     .setFooter({ text: 'Cidade de Deus Roleplay' });
 
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
-      .setCustomId('abrir_ticket')
-      .setLabel('Abrir Ticket')
-      .setStyle(ButtonStyle.Primary)
+      .setCustomId('ticket_suporte')
+      .setLabel('Suporte')
+      .setEmoji('🎫')
+      .setStyle(ButtonStyle.Primary),
+
+    new ButtonBuilder()
+      .setCustomId('ticket_denuncia')
+      .setLabel('Denúncia')
+      .setEmoji('🚨')
+      .setStyle(ButtonStyle.Danger),
+
+    new ButtonBuilder()
+      .setCustomId('ticket_compras')
+      .setLabel('Compras')
+      .setEmoji('💰')
+      .setStyle(ButtonStyle.Success),
+
+    new ButtonBuilder()
+      .setCustomId('ticket_bug')
+      .setLabel('Bug')
+      .setEmoji('🐞')
+      .setStyle(ButtonStyle.Secondary)
   );
 
   await canal.send({ embeds: [embed], components: [row] });
-  console.log('✅ Painel de ticket criado.');
+  console.log('✅ Painel avançado de ticket criado.');
 }
 
 client.once('ready', async () => {
@@ -163,16 +189,58 @@ client.on('messageCreate', async message => {
   }
 });
 
+function getTicketData(customId) {
+  if (customId === 'ticket_suporte') {
+    return {
+      categoria: config.ticketSuporteCategoryId,
+      titulo: '🎫 Suporte',
+      descricao: 'Descreva sua dúvida ou problema. A staff irá te atender em breve.',
+      nome: 'suporte'
+    };
+  }
+
+  if (customId === 'ticket_denuncia') {
+    return {
+      categoria: config.ticketDenunciaCategoryId,
+      titulo: '🚨 Denúncia',
+      descricao: 'Envie o nome/ID do acusado, explique o ocorrido e mande provas se tiver.',
+      nome: 'denuncia'
+    };
+  }
+
+  if (customId === 'ticket_compras') {
+    return {
+      categoria: config.ticketComprasCategoryId,
+      titulo: '💰 Compras',
+      descricao: 'Informe qual produto/VIP deseja comprar ou qual dúvida você tem.',
+      nome: 'compras'
+    };
+  }
+
+  if (customId === 'ticket_bug') {
+    return {
+      categoria: config.ticketBugCategoryId,
+      titulo: '🐞 Reportar Bug',
+      descricao: 'Explique o bug encontrado, onde aconteceu e envie print/vídeo se possível.',
+      nome: 'bug'
+    };
+  }
+
+  return null;
+}
+
 client.on('interactionCreate', async interaction => {
   if (!interaction.isButton()) return;
 
-  if (interaction.customId === 'abrir_ticket') {
+  const ticketData = getTicketData(interaction.customId);
+
+  if (ticketData) {
     const guild = interaction.guild;
 
     const canal = await guild.channels.create({
-      name: `ticket-${interaction.user.username}`,
+      name: `${ticketData.nome}-${interaction.user.username}`,
       type: ChannelType.GuildText,
-      parent: config.ticketCategoryId,
+      parent: ticketData.categoria,
       permissionOverwrites: [
         {
           id: guild.id,
@@ -199,8 +267,8 @@ client.on('interactionCreate', async interaction => {
 
     const embed = new EmbedBuilder()
       .setColor('#FFD700')
-      .setTitle('🎫 Ticket aberto')
-      .setDescription(`${interaction.user}, aguarde a staff te atender.`)
+      .setTitle(ticketData.titulo)
+      .setDescription(`${interaction.user}\n\n${ticketData.descricao}`)
       .setTimestamp();
 
     const row = new ActionRowBuilder().addComponents(
@@ -213,7 +281,7 @@ client.on('interactionCreate', async interaction => {
     await canal.send({ content: `${interaction.user}`, embeds: [embed], components: [row] });
     await interaction.reply({ content: `✅ Ticket criado: ${canal}`, ephemeral: true });
 
-    logEmbed(guild, '🎫 Ticket criado', `${interaction.user} abriu um ticket.`);
+    logEmbed(guild, '🎫 Ticket criado', `${interaction.user} abriu um ticket de ${ticketData.titulo}.`);
   }
 
   if (interaction.customId === 'fechar_ticket') {
@@ -356,14 +424,22 @@ client.on('interactionCreate', async interaction => {
       }
     }
 
-    await interaction.update({ content: '✅ Whitelist aprovada. Cargo aprovado adicionado e cargo Sem WL removido.', components: [] });
+    await interaction.update({
+      content: '✅ Whitelist aprovada. Cargo aprovado adicionado e cargo Sem WL removido.',
+      components: []
+    });
+
     logEmbed(interaction.guild, '✅ Whitelist aprovada', `Usuário aprovado: <@${userId}>`);
   }
 
   if (interaction.customId.startsWith('reprovar_')) {
     const userId = interaction.customId.split('_')[1];
 
-    await interaction.update({ content: '❌ Whitelist reprovada.', components: [] });
+    await interaction.update({
+      content: '❌ Whitelist reprovada.',
+      components: []
+    });
+
     logEmbed(interaction.guild, '❌ Whitelist reprovada', `Usuário reprovado: <@${userId}>`);
   }
 });
