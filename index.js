@@ -22,7 +22,8 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMembers
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildVoiceStates
   ],
   partials: [Partials.Channel]
 });
@@ -37,9 +38,7 @@ for (const file of commandFiles) {
 }
 
 function logEmbed(guild, title, description) {
-
   const channel = guild.channels.cache.get(config.logsChannelId);
-
   if (!channel) return;
 
   const embed = new EmbedBuilder()
@@ -51,15 +50,61 @@ function logEmbed(guild, title, description) {
   channel.send({ embeds: [embed] }).catch(() => {});
 }
 
-async function criarPainelWhitelist() {
+async function atualizarContadores(client) {
+  const guild = client.guilds.cache.get(config.guildId) || client.guilds.cache.first();
+  if (!guild) return;
 
+  await guild.members.fetch().catch(() => {});
+
+  const canalMembros = guild.channels.cache.get(config.contadorMembrosChannelId);
+  const canalBoosts = guild.channels.cache.get(config.contadorBoostsChannelId);
+
+  if (canalMembros) {
+    await canalMembros.setName(`👥 Membros: ${guild.memberCount}`).catch(() => {});
+  }
+
+  if (canalBoosts) {
+    await canalBoosts.setName(`🚀 Boosts: ${guild.premiumSubscriptionCount || 0}`).catch(() => {});
+  }
+}
+
+function iniciarAnunciosAutomaticos() {
+  setInterval(async () => {
+    const guild = client.guilds.cache.get(config.guildId) || client.guilds.cache.first();
+    if (!guild) return;
+
+    const canal = guild.channels.cache.get(config.anunciosAutomaticosChannelId);
+    if (!canal) return;
+
+    const mensagens = [
+      '📢 Não esqueça de ler as regras da cidade!',
+      '🎫 Precisa de ajuda? Abra um ticket no painel oficial.',
+      '📋 Ainda não fez whitelist? Vá até o painel.',
+      '🚀 Convide seus amigos para a Cidade de Deus Roleplay!',
+      '💬 Fique atento aos anúncios oficiais.'
+    ];
+
+    const mensagem = mensagens[Math.floor(Math.random() * mensagens.length)];
+
+    const embed = new EmbedBuilder()
+      .setColor('#FFD700')
+      .setTitle('📢 Aviso Automático')
+      .setDescription(mensagem)
+      .setFooter({ text: 'Cidade de Deus Roleplay' })
+      .setTimestamp();
+
+    await canal.send({ embeds: [embed] }).catch(() => {});
+  }, 1000 * 60 * 60);
+}
+
+async function criarPainelWhitelist() {
   const canal = await client.channels.fetch(config.painelWhitelistChannelId).catch(() => null);
 
   if (!canal) return console.log('❌ Canal whitelist não encontrado.');
 
   const mensagens = await canal.messages.fetch({ limit: 20 }).catch(() => null);
 
-  const jaExiste = mensagens.find(msg =>
+  const jaExiste = mensagens?.find(msg =>
     msg.author.id === client.user.id &&
     msg.embeds.length > 0 &&
     msg.embeds[0].title?.includes('Whitelist')
@@ -91,14 +136,13 @@ async function criarPainelWhitelist() {
 }
 
 async function criarPainelTicket() {
-
   const canal = await client.channels.fetch(config.painelTicketChannelId).catch(() => null);
 
   if (!canal) return console.log('❌ Canal ticket não encontrado.');
 
   const mensagens = await canal.messages.fetch({ limit: 20 }).catch(() => null);
 
-  const jaExiste = mensagens.find(msg =>
+  const jaExiste = mensagens?.find(msg =>
     msg.author.id === client.user.id &&
     msg.embeds.length > 0 &&
     msg.embeds[0].title?.includes('Central de Atendimento')
@@ -120,7 +164,6 @@ async function criarPainelTicket() {
     .setFooter({ text: 'Cidade de Deus Roleplay' });
 
   const row = new ActionRowBuilder().addComponents(
-
     new ButtonBuilder()
       .setCustomId('ticket_suporte')
       .setLabel('Suporte')
@@ -155,26 +198,36 @@ async function criarPainelTicket() {
 }
 
 client.once('ready', async () => {
-
   console.log(`✅ Bot online como ${client.user.tag}`);
 
   await criarPainelWhitelist();
   await criarPainelTicket();
+  await atualizarContadores(client);
+
+  iniciarAnunciosAutomaticos();
 });
 
 client.on('guildMemberAdd', async member => {
-
   const role = member.guild.roles.cache.get(config.autoRoleId);
 
   if (role) {
     await member.roles.add(role).catch(() => {});
   }
 
+  await atualizarContadores(client);
+
   logEmbed(member.guild, '👋 Novo membro', `${member.user} entrou no servidor.`);
 });
 
-client.on('messageDelete', message => {
+client.on('guildMemberRemove', async member => {
+  await atualizarContadores(client);
+});
 
+client.on('guildUpdate', async () => {
+  await atualizarContadores(client);
+});
+
+client.on('messageDelete', message => {
   if (!message.guild || message.author?.bot) return;
 
   logEmbed(
@@ -185,7 +238,6 @@ client.on('messageDelete', message => {
 });
 
 client.on('messageCreate', async message => {
-
   if (message.author.bot) return;
   if (!message.content.startsWith('!')) return;
 
@@ -197,18 +249,14 @@ client.on('messageCreate', async message => {
   if (!command) return;
 
   try {
-
     await command.execute(message, args, client, config);
-
   } catch (error) {
-
     console.error(error);
     message.reply('❌ Erro ao executar comando.');
   }
 });
 
 function getTicketData(customId) {
-
   if (customId === 'ticket_suporte') {
     return {
       categoria: config.ticketSuporteCategoryId,
@@ -249,13 +297,11 @@ function getTicketData(customId) {
 }
 
 client.on('interactionCreate', async interaction => {
-
   if (!interaction.isButton()) return;
 
   const ticketData = getTicketData(interaction.customId);
 
   if (ticketData) {
-
     const guild = interaction.guild;
 
     const canal = await guild.channels.create({
@@ -310,10 +356,11 @@ client.on('interactionCreate', async interaction => {
       content: `✅ Ticket criado: ${canal}`,
       ephemeral: true
     });
+
+    logEmbed(guild, '🎫 Ticket criado', `${interaction.user} abriu um ticket.`);
   }
 
   if (interaction.customId === 'fechar_ticket') {
-
     await interaction.reply('🔒 Ticket será fechado em 5 segundos.');
 
     setTimeout(() => {
@@ -322,7 +369,6 @@ client.on('interactionCreate', async interaction => {
   }
 
   if (interaction.customId === 'abrir_whitelist') {
-
     const guild = interaction.guild;
 
     const canal = await guild.channels.create({
@@ -377,7 +423,6 @@ client.on('interactionCreate', async interaction => {
     const respostas = [];
 
     for (const pergunta of perguntas) {
-
       const embedPergunta = new EmbedBuilder()
         .setColor('#FFD700')
         .setTitle('📋 Whitelist Cidade de Deus RP')
@@ -392,7 +437,6 @@ client.on('interactionCreate', async interaction => {
       });
 
       const resposta = await new Promise(resolve => {
-
         coletor.on('collect', m => {
           resolve(m.content);
         });
@@ -423,7 +467,6 @@ client.on('interactionCreate', async interaction => {
       .setTimestamp();
 
     respostas.forEach(r => {
-
       embedFinal.addFields({
         name: r.pergunta,
         value: r.resposta.slice(0, 1024)
@@ -431,7 +474,6 @@ client.on('interactionCreate', async interaction => {
     });
 
     const row = new ActionRowBuilder().addComponents(
-
       new ButtonBuilder()
         .setCustomId(`aprovar_${interaction.user.id}_${canal.id}`)
         .setLabel('Aprovar')
@@ -452,7 +494,6 @@ client.on('interactionCreate', async interaction => {
   }
 
   if (interaction.customId.startsWith('aprovar_')) {
-
     const parts = interaction.customId.split('_');
 
     const userId = parts[1];
@@ -461,7 +502,6 @@ client.on('interactionCreate', async interaction => {
     const member = await interaction.guild.members.fetch(userId).catch(() => null);
 
     if (member) {
-
       await member.roles.add(config.approvedRoleId).catch(() => {});
 
       const cargoSemWL = interaction.guild.roles.cache.get(config.semWhitelistRoleId);
@@ -483,15 +523,15 @@ client.on('interactionCreate', async interaction => {
     const canalWhitelist = await interaction.guild.channels.fetch(canalWhitelistId).catch(() => null);
 
     if (canalWhitelist) {
-
       setTimeout(() => {
         canalWhitelist.delete().catch(() => {});
       }, 5000);
     }
+
+    logEmbed(interaction.guild, '✅ Whitelist aprovada', `Usuário aprovado: <@${userId}>`);
   }
 
   if (interaction.customId.startsWith('reprovar_')) {
-
     const parts = interaction.customId.split('_');
 
     const userId = parts[1];
@@ -500,7 +540,6 @@ client.on('interactionCreate', async interaction => {
     const member = await interaction.guild.members.fetch(userId).catch(() => null);
 
     if (member) {
-
       await member.send(
         '❌ Sua whitelist foi reprovada. Revise as regras e tente novamente.'
       ).catch(() => {});
@@ -514,11 +553,12 @@ client.on('interactionCreate', async interaction => {
     const canalWhitelist = await interaction.guild.channels.fetch(canalWhitelistId).catch(() => null);
 
     if (canalWhitelist) {
-
       setTimeout(() => {
         canalWhitelist.delete().catch(() => {});
       }, 5000);
     }
+
+    logEmbed(interaction.guild, '❌ Whitelist reprovada', `Usuário reprovado: <@${userId}>`);
   }
 });
 
