@@ -210,6 +210,7 @@ client.once('ready', async () => {
 });
 
 client.on('guildMemberAdd', async member => {
+
   const role = member.guild.roles.cache.get(config.autoRoleId);
 
   if (role) {
@@ -218,7 +219,54 @@ client.on('guildMemberAdd', async member => {
 
   await atualizarContadores(client);
 
-  logEmbed(member.guild, '👋 Novo membro', `${member.user} entrou no servidor.`);
+  const canalBoasVindas = member.guild.channels.cache.get(config.welcomeChannelId);
+
+  if (canalBoasVindas) {
+
+    const embed = new EmbedBuilder()
+
+      .setColor('#FFD700')
+
+      .setTitle('🎉 Bem-vindo à Cidade de Deus Roleplay')
+
+      .setDescription(
+`👋 Olá ${member}
+
+Seja muito bem-vindo(a) à **Cidade de Deus Roleplay**!
+
+📋 Realize sua whitelist no canal:
+<#${config.painelWhitelistChannelId}>
+
+🚨 Leia as regras da cidade
+🎫 Utilize tickets caso precise de ajuda
+💬 Interaja com nossa comunidade
+
+🔥 Agora somos **${member.guild.memberCount} membros** no servidor!
+
+💛 Aproveite sua estadia na cidade!`
+      )
+
+      .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
+
+      .setImage('https://cdn.discordapp.com/attachments/1198277210088407130/1508239426470412340/ChatGPT_Image_24_de_mai._de_2026_19_44_32.png?ex=6a14d0ed&is=6a137f6d&hm=7bb010f53a94c0a21bd821ca86e65098e4f88152326ae68b01421ba8857136aa&')
+
+      .setFooter({
+        text: 'Cidade de Deus Roleplay'
+      })
+
+      .setTimestamp();
+
+    await canalBoasVindas.send({
+      content: `${member}`,
+      embeds: [embed]
+    }).catch(() => {});
+  }
+
+  logEmbed(
+    member.guild,
+    '👋 Novo membro',
+    `${member.user} entrou no servidor.`
+  );
 });
 
 client.on('guildMemberRemove', async member => {
