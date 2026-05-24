@@ -36,6 +36,7 @@ for (const file of commandFiles) {
 }
 
 function logEmbed(guild, title, description) {
+
   const channel = guild.channels.cache.get(config.logsChannelId);
   if (!channel) return;
 
@@ -49,11 +50,12 @@ function logEmbed(guild, title, description) {
 }
 
 async function criarPainelWhitelist() {
+
   const canal = await client.channels.fetch(config.painelWhitelistChannelId).catch(() => null);
-  if (!canal) return console.log('❌ Canal de painel whitelist não encontrado.');
+
+  if (!canal) return console.log('❌ Canal whitelist não encontrado.');
 
   const mensagens = await canal.messages.fetch({ limit: 20 }).catch(() => null);
-  if (!mensagens) return console.log('❌ Não consegui ler mensagens do canal whitelist.');
 
   const jaExiste = mensagens.find(msg =>
     msg.author.id === client.user.id &&
@@ -63,7 +65,6 @@ async function criarPainelWhitelist() {
 
   if (jaExiste) {
     await jaExiste.delete().catch(() => {});
-    console.log('🗑️ Painel antigo de whitelist apagado.');
   }
 
   const embed = new EmbedBuilder()
@@ -79,16 +80,21 @@ async function criarPainelWhitelist() {
       .setStyle(ButtonStyle.Success)
   );
 
-  await canal.send({ embeds: [embed], components: [row] });
-  console.log('✅ Painel de whitelist criado.');
+  await canal.send({
+    embeds: [embed],
+    components: [row]
+  });
+
+  console.log('✅ Painel whitelist criado.');
 }
 
 async function criarPainelTicket() {
+
   const canal = await client.channels.fetch(config.painelTicketChannelId).catch(() => null);
-  if (!canal) return console.log('❌ Canal de painel ticket não encontrado.');
+
+  if (!canal) return console.log('❌ Canal ticket não encontrado.');
 
   const mensagens = await canal.messages.fetch({ limit: 20 }).catch(() => null);
-  if (!mensagens) return console.log('❌ Não consegui ler mensagens do canal ticket.');
 
   const jaExiste = mensagens.find(msg =>
     msg.author.id === client.user.id &&
@@ -98,23 +104,21 @@ async function criarPainelTicket() {
 
   if (jaExiste) {
     await jaExiste.delete().catch(() => {});
-    console.log('🗑️ Painel antigo de ticket apagado.');
   }
 
   const embed = new EmbedBuilder()
     .setColor('#FFD700')
     .setTitle('🎫 Central de Atendimento')
     .setDescription(`
-Selecione o tipo de atendimento abaixo:
-
-🎫 **Suporte** — dúvidas ou ajuda geral
-🚨 **Denúncia** — denunciar player/staff
-💰 **Compras** — dúvidas sobre compras/VIP
-🐞 **Bug** — reportar erro do servidor
+🎫 Suporte
+🚨 Denúncia
+💰 Compras
+🐞 Reportar Bug
     `)
     .setFooter({ text: 'Cidade de Deus Roleplay' });
 
   const row = new ActionRowBuilder().addComponents(
+
     new ButtonBuilder()
       .setCustomId('ticket_suporte')
       .setLabel('Suporte')
@@ -140,11 +144,16 @@ Selecione o tipo de atendimento abaixo:
       .setStyle(ButtonStyle.Secondary)
   );
 
-  await canal.send({ embeds: [embed], components: [row] });
-  console.log('✅ Painel avançado de ticket criado.');
+  await canal.send({
+    embeds: [embed],
+    components: [row]
+  });
+
+  console.log('✅ Painel ticket criado.');
 }
 
 client.once('ready', async () => {
+
   console.log(`✅ Bot online como ${client.user.tag}`);
 
   await criarPainelWhitelist();
@@ -152,6 +161,7 @@ client.once('ready', async () => {
 });
 
 client.on('guildMemberAdd', async member => {
+
   const role = member.guild.roles.cache.get(config.autoRoleId);
 
   if (role) {
@@ -162,6 +172,7 @@ client.on('guildMemberAdd', async member => {
 });
 
 client.on('messageDelete', message => {
+
   if (!message.guild || message.author?.bot) return;
 
   logEmbed(
@@ -172,6 +183,7 @@ client.on('messageDelete', message => {
 });
 
 client.on('messageCreate', async message => {
+
   if (message.author.bot) return;
   if (!message.content.startsWith('!')) return;
 
@@ -179,22 +191,27 @@ client.on('messageCreate', async message => {
   const commandName = args.shift().toLowerCase();
 
   const command = client.commands.get(commandName);
+
   if (!command) return;
 
   try {
+
     await command.execute(message, args, client, config);
+
   } catch (error) {
+
     console.error(error);
     message.reply('❌ Erro ao executar comando.');
   }
 });
 
 function getTicketData(customId) {
+
   if (customId === 'ticket_suporte') {
     return {
       categoria: config.ticketSuporteCategoryId,
       titulo: '🎫 Suporte',
-      descricao: 'Descreva sua dúvida ou problema. A staff irá te atender em breve.',
+      descricao: 'Descreva sua dúvida ou problema.',
       nome: 'suporte'
     };
   }
@@ -203,7 +220,7 @@ function getTicketData(customId) {
     return {
       categoria: config.ticketDenunciaCategoryId,
       titulo: '🚨 Denúncia',
-      descricao: 'Envie o nome/ID do acusado, explique o ocorrido e mande provas se tiver.',
+      descricao: 'Envie provas da denúncia.',
       nome: 'denuncia'
     };
   }
@@ -212,7 +229,7 @@ function getTicketData(customId) {
     return {
       categoria: config.ticketComprasCategoryId,
       titulo: '💰 Compras',
-      descricao: 'Informe qual produto/VIP deseja comprar ou qual dúvida você tem.',
+      descricao: 'Informe o produto desejado.',
       nome: 'compras'
     };
   }
@@ -221,7 +238,7 @@ function getTicketData(customId) {
     return {
       categoria: config.ticketBugCategoryId,
       titulo: '🐞 Reportar Bug',
-      descricao: 'Explique o bug encontrado, onde aconteceu e envie print/vídeo se possível.',
+      descricao: 'Explique o bug encontrado.',
       nome: 'bug'
     };
   }
@@ -230,17 +247,20 @@ function getTicketData(customId) {
 }
 
 client.on('interactionCreate', async interaction => {
+
   if (!interaction.isButton()) return;
 
   const ticketData = getTicketData(interaction.customId);
 
   if (ticketData) {
+
     const guild = interaction.guild;
 
     const canal = await guild.channels.create({
       name: `${ticketData.nome}-${interaction.user.username}`,
       type: ChannelType.GuildText,
       parent: ticketData.categoria,
+
       permissionOverwrites: [
         {
           id: guild.id,
@@ -278,24 +298,38 @@ client.on('interactionCreate', async interaction => {
         .setStyle(ButtonStyle.Danger)
     );
 
-    await canal.send({ content: `${interaction.user}`, embeds: [embed], components: [row] });
-    await interaction.reply({ content: `✅ Ticket criado: ${canal}`, ephemeral: true });
+    await canal.send({
+      content: `${interaction.user}`,
+      embeds: [embed],
+      components: [row]
+    });
 
-    logEmbed(guild, '🎫 Ticket criado', `${interaction.user} abriu um ticket de ${ticketData.titulo}.`);
+    await interaction.reply({
+      content: `✅ Ticket criado: ${canal}`,
+      ephemeral: true
+    });
+
+    logEmbed(guild, '🎫 Ticket criado', `${interaction.user} abriu um ticket.`);
   }
 
   if (interaction.customId === 'fechar_ticket') {
+
     await interaction.reply('🔒 Ticket será fechado em 5 segundos.');
-    setTimeout(() => interaction.channel.delete().catch(() => {}), 5000);
+
+    setTimeout(() => {
+      interaction.channel.delete().catch(() => {});
+    }, 5000);
   }
 
   if (interaction.customId === 'abrir_whitelist') {
+
     const guild = interaction.guild;
 
     const canal = await guild.channels.create({
       name: `whitelist-${interaction.user.username}`,
       type: ChannelType.GuildText,
       parent: config.whitelistCategoryId,
+
       permissionOverwrites: [
         {
           id: guild.id,
@@ -343,11 +377,12 @@ client.on('interactionCreate', async interaction => {
     const respostas = [];
 
     for (const pergunta of perguntas) {
+
       const embedPergunta = new EmbedBuilder()
         .setColor('#FFD700')
         .setTitle('📋 Whitelist Cidade de Deus RP')
         .setDescription(pergunta)
-        .setFooter({ text: 'Responda abaixo. Você tem 5 minutos.' });
+        .setFooter({ text: 'Você tem 5 minutos para responder.' });
 
       await canal.send({ embeds: [embedPergunta] });
 
@@ -358,10 +393,15 @@ client.on('interactionCreate', async interaction => {
       });
 
       const resposta = await new Promise(resolve => {
-        coletor.on('collect', m => resolve(m.content));
+
+        coletor.on('collect', m => {
+          resolve(m.content);
+        });
 
         coletor.on('end', collected => {
-          if (collected.size === 0) resolve('❌ Não respondeu.');
+          if (collected.size === 0) {
+            resolve('❌ Não respondeu.');
+          }
         });
       });
 
@@ -374,7 +414,7 @@ client.on('interactionCreate', async interaction => {
     const canalStaff = await guild.channels.fetch(config.whitelistChannelId).catch(() => null);
 
     if (!canalStaff) {
-      return canal.send('❌ Canal de análise da whitelist não encontrado. Avise a staff.');
+      return canal.send('❌ Canal de análise não encontrado.');
     }
 
     const embedFinal = new EmbedBuilder()
@@ -384,6 +424,7 @@ client.on('interactionCreate', async interaction => {
       .setTimestamp();
 
     respostas.forEach(r => {
+
       embedFinal.addFields({
         name: r.pergunta,
         value: r.resposta.slice(0, 1024)
@@ -391,13 +432,14 @@ client.on('interactionCreate', async interaction => {
     });
 
     const row = new ActionRowBuilder().addComponents(
+
       new ButtonBuilder()
-        .setCustomId(`aprovar_${interaction.user.id}`)
+        .setCustomId(`aprovar_${interaction.user.id}_${canal.id}`)
         .setLabel('Aprovar')
         .setStyle(ButtonStyle.Success),
 
       new ButtonBuilder()
-        .setCustomId(`reprovar_${interaction.user.id}`)
+        .setCustomId(`reprovar_${interaction.user.id}_${canal.id}`)
         .setLabel('Reprovar')
         .setStyle(ButtonStyle.Danger)
     );
@@ -411,10 +453,16 @@ client.on('interactionCreate', async interaction => {
   }
 
   if (interaction.customId.startsWith('aprovar_')) {
-    const userId = interaction.customId.split('_')[1];
+
+    const parts = interaction.customId.split('_');
+
+    const userId = parts[1];
+    const canalWhitelistId = parts[2];
+
     const member = await interaction.guild.members.fetch(userId).catch(() => null);
 
     if (member) {
+
       await member.roles.add(config.approvedRoleId).catch(() => {});
 
       const cargoSemWL = interaction.guild.roles.cache.get(config.semWhitelistRoleId);
@@ -422,23 +470,58 @@ client.on('interactionCreate', async interaction => {
       if (cargoSemWL && member.roles.cache.has(cargoSemWL.id)) {
         await member.roles.remove(cargoSemWL).catch(() => {});
       }
+
+      await member.send(
+        '✅ Parabéns! Sua whitelist foi aprovada na Cidade de Deus Roleplay.'
+      ).catch(() => {});
     }
 
     await interaction.update({
-      content: '✅ Whitelist aprovada. Cargo aprovado adicionado e cargo Sem WL removido.',
+      content: '✅ Whitelist aprovada.',
       components: []
     });
+
+    const canalWhitelist = interaction.guild.channels.cache.get(canalWhitelistId);
+
+    if (canalWhitelist) {
+
+      setTimeout(() => {
+        canalWhitelist.delete().catch(() => {});
+      }, 5000);
+    }
 
     logEmbed(interaction.guild, '✅ Whitelist aprovada', `Usuário aprovado: <@${userId}>`);
   }
 
   if (interaction.customId.startsWith('reprovar_')) {
-    const userId = interaction.customId.split('_')[1];
+
+    const parts = interaction.customId.split('_');
+
+    const userId = parts[1];
+    const canalWhitelistId = parts[2];
+
+    const member = await interaction.guild.members.fetch(userId).catch(() => null);
+
+    if (member) {
+
+      await member.send(
+        '❌ Sua whitelist foi reprovada na Cidade de Deus Roleplay. Revise as regras e tente novamente.'
+      ).catch(() => {});
+    }
 
     await interaction.update({
       content: '❌ Whitelist reprovada.',
       components: []
     });
+
+    const canalWhitelist = interaction.guild.channels.cache.get(canalWhitelistId);
+
+    if (canalWhitelist) {
+
+      setTimeout(() => {
+        canalWhitelist.delete().catch(() => {});
+      }, 5000);
+    }
 
     logEmbed(interaction.guild, '❌ Whitelist reprovada', `Usuário reprovado: <@${userId}>`);
   }
