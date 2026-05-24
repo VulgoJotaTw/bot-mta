@@ -1,6 +1,7 @@
 require('dotenv').config();
 
 const fs = require('fs');
+
 const {
   Client,
   Collection,
@@ -38,6 +39,7 @@ for (const file of commandFiles) {
 function logEmbed(guild, title, description) {
 
   const channel = guild.channels.cache.get(config.logsChannelId);
+
   if (!channel) return;
 
   const embed = new EmbedBuilder()
@@ -308,8 +310,6 @@ client.on('interactionCreate', async interaction => {
       content: `✅ Ticket criado: ${canal}`,
       ephemeral: true
     });
-
-    logEmbed(guild, '🎫 Ticket criado', `${interaction.user} abriu um ticket.`);
   }
 
   if (interaction.customId === 'fechar_ticket') {
@@ -381,8 +381,7 @@ client.on('interactionCreate', async interaction => {
       const embedPergunta = new EmbedBuilder()
         .setColor('#FFD700')
         .setTitle('📋 Whitelist Cidade de Deus RP')
-        .setDescription(pergunta)
-        .setFooter({ text: 'Você tem 5 minutos para responder.' });
+        .setDescription(pergunta);
 
       await canal.send({ embeds: [embedPergunta] });
 
@@ -414,7 +413,7 @@ client.on('interactionCreate', async interaction => {
     const canalStaff = await guild.channels.fetch(config.whitelistChannelId).catch(() => null);
 
     if (!canalStaff) {
-      return canal.send('❌ Canal de análise não encontrado.');
+      return canal.send('❌ Canal análise whitelist não encontrado.');
     }
 
     const embedFinal = new EmbedBuilder()
@@ -449,7 +448,7 @@ client.on('interactionCreate', async interaction => {
       components: [row]
     });
 
-    await canal.send('✅ Sua whitelist foi enviada para análise da staff.');
+    await canal.send('✅ Sua whitelist foi enviada para análise.');
   }
 
   if (interaction.customId.startsWith('aprovar_')) {
@@ -472,7 +471,7 @@ client.on('interactionCreate', async interaction => {
       }
 
       await member.send(
-        '✅ Parabéns! Sua whitelist foi aprovada na Cidade de Deus Roleplay.'
+        '✅ Sua whitelist foi aprovada na Cidade de Deus Roleplay!'
       ).catch(() => {});
     }
 
@@ -481,7 +480,7 @@ client.on('interactionCreate', async interaction => {
       components: []
     });
 
-    const canalWhitelist = interaction.guild.channels.cache.get(canalWhitelistId);
+    const canalWhitelist = await interaction.guild.channels.fetch(canalWhitelistId).catch(() => null);
 
     if (canalWhitelist) {
 
@@ -489,8 +488,6 @@ client.on('interactionCreate', async interaction => {
         canalWhitelist.delete().catch(() => {});
       }, 5000);
     }
-
-    logEmbed(interaction.guild, '✅ Whitelist aprovada', `Usuário aprovado: <@${userId}>`);
   }
 
   if (interaction.customId.startsWith('reprovar_')) {
@@ -505,7 +502,7 @@ client.on('interactionCreate', async interaction => {
     if (member) {
 
       await member.send(
-        '❌ Sua whitelist foi reprovada na Cidade de Deus Roleplay. Revise as regras e tente novamente.'
+        '❌ Sua whitelist foi reprovada. Revise as regras e tente novamente.'
       ).catch(() => {});
     }
 
@@ -514,7 +511,7 @@ client.on('interactionCreate', async interaction => {
       components: []
     });
 
-    const canalWhitelist = interaction.guild.channels.cache.get(canalWhitelistId);
+    const canalWhitelist = await interaction.guild.channels.fetch(canalWhitelistId).catch(() => null);
 
     if (canalWhitelist) {
 
@@ -522,8 +519,6 @@ client.on('interactionCreate', async interaction => {
         canalWhitelist.delete().catch(() => {});
       }, 5000);
     }
-
-    logEmbed(interaction.guild, '❌ Whitelist reprovada', `Usuário reprovado: <@${userId}>`);
   }
 });
 
