@@ -30,6 +30,8 @@ const client = new Client({
 
 client.commands = new Collection();
 
+let anunciosAtivos = true;
+
 const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
 
 for (const file of commandFiles) {
@@ -70,6 +72,8 @@ async function atualizarContadores(client) {
 
 function iniciarAnunciosAutomaticos() {
   setInterval(async () => {
+    if (!anunciosAtivos) return;
+
     const guild = client.guilds.cache.get(config.guildId) || client.guilds.cache.first();
     if (!guild) return;
 
@@ -94,12 +98,11 @@ function iniciarAnunciosAutomaticos() {
       .setTimestamp();
 
     await canal.send({ embeds: [embed] }).catch(() => {});
-  }, 1000 * 60 * 60);
+  }, 1000 * 60 * 60 * 2);
 }
 
 async function criarPainelWhitelist() {
   const canal = await client.channels.fetch(config.painelWhitelistChannelId).catch(() => null);
-
   if (!canal) return console.log('❌ Canal whitelist não encontrado.');
 
   const mensagens = await canal.messages.fetch({ limit: 20 }).catch(() => null);
@@ -137,7 +140,6 @@ async function criarPainelWhitelist() {
 
 async function criarPainelTicket() {
   const canal = await client.channels.fetch(config.painelTicketChannelId).catch(() => null);
-
   if (!canal) return console.log('❌ Canal ticket não encontrado.');
 
   const mensagens = await canal.messages.fetch({ limit: 20 }).catch(() => null);
@@ -243,6 +245,30 @@ client.on('messageCreate', async message => {
 
   const args = message.content.slice(1).split(/ +/);
   const commandName = args.shift().toLowerCase();
+
+  if (commandName === 'anuncios') {
+    if (!message.member.roles.cache.has(config.staffRoleId)) {
+      return message.reply('❌ Você não tem permissão.');
+    }
+
+    const acao = args[0];
+
+    if (!acao) {
+      return message.reply('Use: !anuncios on/off');
+    }
+
+    if (acao === 'on') {
+      anunciosAtivos = true;
+      return message.reply('✅ Anúncios automáticos ativados.');
+    }
+
+    if (acao === 'off') {
+      anunciosAtivos = false;
+      return message.reply('❌ Anúncios automáticos desativados.');
+    }
+
+    return message.reply('Use: !anuncios on/off');
+  }
 
   const command = client.commands.get(commandName);
 
