@@ -4,7 +4,6 @@ module.exports = {
   name: 'stop',
 
   async execute(message) {
-
     const connection = getVoiceConnection(message.guild.id);
 
     if (!connection) {
@@ -13,6 +12,6 @@ module.exports = {
 
     connection.destroy();
 
-    message.reply('⏹️ Música parada.');
+    message.reply('⏹️ Saí da call e parei a música.');
   }
 };
