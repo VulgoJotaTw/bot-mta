@@ -2,66 +2,57 @@ const {
   joinVoiceChannel,
   createAudioPlayer,
   createAudioResource,
-  AudioPlayerStatus
+  AudioPlayerStatus,
+  NoSubscriberBehavior
 } = require('@discordjs/voice');
 
-const ytdl = require('@distube/ytdl-core');
+const play = require('play-dl');
 
 module.exports = {
   name: 'play',
 
   async execute(message, args) {
-
     const url = args[0];
 
-    if (!url) {
-      return message.reply('❌ Envie um link.');
-    }
+    if (!url) return message.reply('❌ Use: !play link_do_youtube');
 
-    const canal = message.member.voice.channel;
-
-    if (!canal) {
-      return message.reply('❌ Entre em uma call.');
-    }
+    const canalVoz = message.member.voice.channel;
+    if (!canalVoz) return message.reply('❌ Entre em uma call primeiro.');
 
     try {
-
       const connection = joinVoiceChannel({
-        channelId: canal.id,
-        guildId: canal.guild.id,
-        adapterCreator: canal.guild.voiceAdapterCreator
+        channelId: canalVoz.id,
+        guildId: message.guild.id,
+        adapterCreator: message.guild.voiceAdapterCreator,
+        selfDeaf: false
       });
 
-      const stream = ytdl(url, {
-        filter: 'audioonly',
-        quality: 'highestaudio',
-        highWaterMark: 1 << 25
+      const stream = await play.stream(url);
+
+      const resource = createAudioResource(stream.stream, {
+        inputType: stream.type
       });
 
-      const resource = createAudioResource(stream);
-
-      const player = createAudioPlayer();
+      const player = createAudioPlayer({
+        behaviors: {
+          noSubscriber: NoSubscriberBehavior.Play
+        }
+      });
 
       connection.subscribe(player);
-
       player.play(resource);
 
       player.on(AudioPlayerStatus.Playing, () => {
-
-        message.reply('🎵 Música tocando.');
+        message.reply('🎵 Tocando música agora.');
       });
 
       player.on('error', error => {
-
-        console.log(error);
-
+        console.error('Erro no player:', error);
         message.reply('❌ Erro ao tocar música.');
       });
 
-    } catch (err) {
-
-      console.log(err);
-
+    } catch (error) {
+      console.error('Erro no play:', error);
       message.reply('❌ Não consegui tocar essa música.');
     }
   }
