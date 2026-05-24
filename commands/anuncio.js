@@ -14,6 +14,14 @@ module.exports = {
       return message.reply('Use: !anuncio sua mensagem');
     }
 
+    const mencoesRoles = message.mentions.roles.map(role => role.id);
+    const mencionaEveryone = message.mentions.everyone;
+
+    const contentMencoes = [
+      mencionaEveryone ? '@everyone' : '',
+      ...message.mentions.roles.map(role => `<@&${role.id}>`)
+    ].filter(Boolean).join(' ');
+
     const embed = new EmbedBuilder()
       .setColor('#FFD700')
       .setTitle('📢 Anúncio Oficial')
@@ -22,10 +30,11 @@ module.exports = {
       .setTimestamp();
 
     await message.channel.send({
-      content: '@everyone',
+      content: contentMencoes || null,
       embeds: [embed],
       allowedMentions: {
-        parse: ['everyone', 'roles', 'users']
+        parse: mencionaEveryone ? ['everyone'] : [],
+        roles: mencoesRoles
       }
     });
 
