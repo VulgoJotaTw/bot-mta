@@ -39,8 +39,8 @@ for (const file of commandFiles) {
   client.commands.set(command.name, command);
 }
 
-function logEmbed(guild, title, description) {
-  const channel = guild.channels.cache.get(config.logsChannelId);
+function logEmbed(guild, channelId, title, description) {
+  const channel = guild.channels.cache.get(channelId);
   if (!channel) return;
 
   const embed = new EmbedBuilder()
@@ -210,7 +210,6 @@ client.once('ready', async () => {
 });
 
 client.on('guildMemberAdd', async member => {
-
   const role = member.guild.roles.cache.get(config.autoRoleId);
 
   if (role) {
@@ -222,13 +221,9 @@ client.on('guildMemberAdd', async member => {
   const canalBoasVindas = member.guild.channels.cache.get(config.welcomeChannelId);
 
   if (canalBoasVindas) {
-
     const embed = new EmbedBuilder()
-
       .setColor('#FFD700')
-
       .setTitle('🎉 Bem-vindo à Cidade de Deus Roleplay')
-
       .setDescription(
 `👋 Olá ${member}
 
@@ -245,15 +240,9 @@ Seja muito bem-vindo(a) à **Cidade de Deus Roleplay**!
 
 💛 Aproveite sua estadia na cidade!`
       )
-
       .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
-
       .setImage('https://cdn.discordapp.com/attachments/1198277210088407130/1508239426470412340/ChatGPT_Image_24_de_mai._de_2026_19_44_32.png?ex=6a14d0ed&is=6a137f6d&hm=7bb010f53a94c0a21bd821ca86e65098e4f88152326ae68b01421ba8857136aa&')
-
-      .setFooter({
-        text: 'Cidade de Deus Roleplay'
-      })
-
+      .setFooter({ text: 'Cidade de Deus Roleplay' })
       .setTimestamp();
 
     await canalBoasVindas.send({
@@ -264,6 +253,7 @@ Seja muito bem-vindo(a) à **Cidade de Deus Roleplay**!
 
   logEmbed(
     member.guild,
+    config.entradaLogsChannelId,
     '👋 Novo membro',
     `${member.user} entrou no servidor.`
   );
@@ -271,6 +261,13 @@ Seja muito bem-vindo(a) à **Cidade de Deus Roleplay**!
 
 client.on('guildMemberRemove', async member => {
   await atualizarContadores(client);
+
+  logEmbed(
+    member.guild,
+    config.saidaLogsChannelId,
+    '🚪 Membro saiu',
+    `${member.user} saiu do servidor.`
+  );
 });
 
 client.on('guildUpdate', async () => {
@@ -282,6 +279,7 @@ client.on('messageDelete', message => {
 
   logEmbed(
     message.guild,
+    config.mensagemLogsChannelId,
     '🗑️ Mensagem apagada',
     `Autor: ${message.author}\nCanal: ${message.channel}\nMensagem: ${message.content || 'Sem conteúdo'}`
   );
@@ -431,7 +429,12 @@ client.on('interactionCreate', async interaction => {
       ephemeral: true
     });
 
-    logEmbed(guild, '🎫 Ticket criado', `${interaction.user} abriu um ticket.`);
+    logEmbed(
+      guild,
+      config.ticketLogsChannelId,
+      '🎫 Ticket criado',
+      `${interaction.user} abriu um ticket de ${ticketData.titulo}.`
+    );
   }
 
   if (interaction.customId === 'fechar_ticket') {
@@ -602,7 +605,12 @@ client.on('interactionCreate', async interaction => {
       }, 5000);
     }
 
-    logEmbed(interaction.guild, '✅ Whitelist aprovada', `Usuário aprovado: <@${userId}>`);
+    logEmbed(
+      interaction.guild,
+      config.whitelistLogsChannelId,
+      '✅ Whitelist aprovada',
+      `Usuário aprovado: <@${userId}>`
+    );
   }
 
   if (interaction.customId.startsWith('reprovar_')) {
@@ -632,7 +640,12 @@ client.on('interactionCreate', async interaction => {
       }, 5000);
     }
 
-    logEmbed(interaction.guild, '❌ Whitelist reprovada', `Usuário reprovado: <@${userId}>`);
+    logEmbed(
+      interaction.guild,
+      config.whitelistLogsChannelId,
+      '❌ Whitelist reprovada',
+      `Usuário reprovado: <@${userId}>`
+    );
   }
 });
 

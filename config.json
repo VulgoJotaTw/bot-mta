@@ -7,17 +7,36 @@
   "painelWhitelistChannelId": "1507527845188993164",
   "whitelistChannelId": "1507533571584295035",
   "whitelistCategoryId": "1127481275675062396",
+
   "painelTicketChannelId": "1127481276216127535",
+
   "ticketSuporteCategoryId": "1127481276216127534",
   "ticketDenunciaCategoryId": "1127481276216127534",
   "ticketComprasCategoryId": "1127481276216127534",
   "ticketBugCategoryId": "1127481276216127534",
+
   "semWhitelistRoleId": "1507521621399965859",
+
   "contadorMembrosChannelId": "1507966895691923556",
   "contadorBoostsChannelId": "1507967163879653397",
+
   "welcomeChannelId": "1508230170455048282",
+
   "anunciosAutomaticosChannelId": "1127481276664909836",
+
+  "entradaLogsChannelId": "1127481277491195988",
+  "saidaLogsChannelId": "1127481277491195989",
+
+  "punicaoLogsChannelId": "1508565227141337219",
+
+  "mensagemLogsChannelId": "1508566121782182120",
+
+  "ticketLogsChannelId": "1508565397539127486",
+
+  "whitelistLogsChannelId": "1508565343730405606",
+
   "mtaIp": "151.242.227.127",
   "mtaPort": 22813,
+
   "discordLink": "https://discord.gg/AhDFMfxgPU"
 }
